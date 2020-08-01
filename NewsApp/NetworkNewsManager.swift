@@ -17,7 +17,6 @@ class NetworkNewsManager {
     private var isLoading = false
     private var shouldLoadNextPage = true
     private var articles: [Articles] = []
-    private var shouldActivateActivityIndicator = false
     
     var onCompletion: (([Articles]) -> Void)?
     var activateActivityIndicator: ((Bool) -> Void)?
@@ -25,11 +24,10 @@ class NetworkNewsManager {
     func fetchNews(isRefreshing: Bool = false) {
         if !isRefreshing && (isLoading || !shouldLoadNextPage) { return }
         if isRefreshing { self.pageNumber = 1 }
-
+        
         guard let request = createRequest(for: NewsAPI.topHeadlines(pageNumber: pageNumber)) else { return }
         
         performRequest(with: request, for: NewsAPI.topHeadlines(pageNumber: pageNumber), isRefreshing: isRefreshing)
-        shouldActivateActivityIndicator = false
     }
 }
 
@@ -57,9 +55,13 @@ private extension NetworkNewsManager {
     
     private func performRequest(with request: URLRequest,for endpoint: EndpointProtocol, isRefreshing: Bool) {
         isLoading = true
+        activateActivityIndicator?(true)
         // запрос данных
         let task = session.dataTask(with: request) { [weak self] data, _, _ in
             guard let self = self else { return }
+            DispatchQueue.main.async {
+                self.activateActivityIndicator?(false)
+            }
             self.isLoading = false
             
             guard
@@ -72,11 +74,9 @@ private extension NetworkNewsManager {
                 ? news.articles
                 : self.articles + news.articles
             self.shouldLoadNextPage = news.articles.count == Container.pageSize
-            self.shouldActivateActivityIndicator = news.articles.count == Container.pageSize
             
             DispatchQueue.main.async {
                 self.onCompletion?(self.articles)
-                self.activateActivityIndicator?(self.shouldActivateActivityIndicator)
             }
         }
         //начало работы запроса

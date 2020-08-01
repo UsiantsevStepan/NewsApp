@@ -21,7 +21,7 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
         }
     }
     
-    private var shouldActivateActivityIndicator = false
+    //    private var shouldActivateActivityIndicator = false
     
     private let pageActivityIndicator = UIActivityIndicatorView(style: .gray)
     
@@ -37,13 +37,20 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
         tableView.refreshControl = refreshControl
         
         networkNewsManager.onCompletion = { [weak self] articles in
-                self?.news = articles
-                self?.refreshControl.endRefreshing()
-                self?.pageActivityIndicator.stopAnimating()
+            self?.news = articles
+            self?.refreshControl.endRefreshing()
+            //                self?.pageActivityIndicator.stopAnimating()
         }
         
         networkNewsManager.activateActivityIndicator = { [weak self] shouldActivateActivityIndicator in
-            self?.shouldActivateActivityIndicator = shouldActivateActivityIndicator
+            if shouldActivateActivityIndicator {
+                self?.tableView.tableFooterView = self?.pageActivityIndicator
+                self?.pageActivityIndicator.startAnimating()
+            } else {
+                self?.pageActivityIndicator.stopAnimating()
+                self?.tableView.tableFooterView = nil
+            }
+            //            self?.shouldActivateActivityIndicator = shouldActivateActivityIndicator
         }
         
         self.tableView.tableFooterView = nil
@@ -54,7 +61,7 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
     @objc private func refresh(sender: UIRefreshControl) {
         networkNewsManager.fetchNews(isRefreshing: true)
     }
-
+    
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return news.count
     }
@@ -90,9 +97,6 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
         if offsetY > 0,
             offsetY > contentHeight - scrollView.frame.height + 200 {
             networkNewsManager.fetchNews()
-            tableView.tableFooterView = pageActivityIndicator
-            guard shouldActivateActivityIndicator else { return }
-            pageActivityIndicator.startAnimating()
         }
-        }
+    }
 }
