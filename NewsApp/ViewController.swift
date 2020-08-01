@@ -8,52 +8,54 @@
 
 import UIKit
 import Kingfisher
+import SafariServices
 
-class ViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
+class ViewController: UIViewController, UITableViewDataSource, UITableViewDelegate, SFSafariViewControllerDelegate {
     
     @IBOutlet weak var tableView: UITableView!
     
-    var tableViewCell = TableViewCell()
-    var networkNewsManager = NetworkNewsManager()
-    var news = [Articles]()
-    var fetchingMore = false
-    var isLoading = false
+    private var networkNewsManager = NetworkNewsManager()
+    private var news = [Articles]() {
+        didSet {
+            tableView.reloadData()
+        }
+    }
+    
+    private var shouldActivateActivityIndicator = false
+    
+    private let pageActivityIndicator = UIActivityIndicatorView(style: .gray)
     
     var refreshControl: UIRefreshControl = {
         let refreshControl = UIRefreshControl()
-        refreshControl.addTarget(self, action: #selector(refresh(sender:)), for: .valueChanged)
         return refreshControl
     }()
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        networkNewsManager.onCompletion = { [weak self] news in
-            DispatchQueue.main.async {
-                self?.news += news.articles
-                self?.fetchingMore = news.articles.count  >= 10
-                self?.isLoading = false
-                OperationQueue.main.addOperation {
-                    self?.refreshControl.endRefreshing()
-                    self?.tableView.reloadData()
-                }
-            }
+        refreshControl.addTarget(self, action: #selector(refresh), for: .valueChanged)
+        tableView.refreshControl = refreshControl
+        
+        networkNewsManager.onCompletion = { [weak self] articles in
+                self?.news = articles
+                self?.refreshControl.endRefreshing()
+                self?.pageActivityIndicator.stopAnimating()
         }
-        self.tableView.refreshControl = self.refreshControl
-        isLoading = true
+        
+        networkNewsManager.activateActivityIndicator = { [weak self] shouldActivateActivityIndicator in
+            self?.shouldActivateActivityIndicator = shouldActivateActivityIndicator
+        }
+        
+        self.tableView.tableFooterView = nil
+        pageActivityIndicator.hidesWhenStopped = true
         networkNewsManager.fetchNews()
     }
     
     @objc private func refresh(sender: UIRefreshControl) {
-        news = []
-//        tableView.reloadData()
-        networkNewsManager.pageNumber = 1
-        isLoading = true
-        networkNewsManager.fetchNews()
+        networkNewsManager.fetchNews(isRefreshing: true)
     }
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        
         return news.count
     }
     
@@ -73,23 +75,24 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
         return cell
     }
     
-//    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-//        let cellHeight = UITableView.automaticDimension
-//
-//        return cellHeight
-//    }
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        guard let newsUrl = news[indexPath.row].url else { return }
+        let vc = SFSafariViewController(url: newsUrl)
+        vc.delegate = self
+        
+        present(vc, animated: true, completion: nil)
+    }
     
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         let offsetY = scrollView.contentOffset.y
         let contentHeight = scrollView.contentSize.height
         
-        if offsetY > 0 && offsetY > contentHeight - scrollView.frame.height {
-            if fetchingMore {
-                if isLoading { return }
-                isLoading = true
-                networkNewsManager.fetchNews()
-            }
-            }
+        if offsetY > 0,
+            offsetY > contentHeight - scrollView.frame.height + 200 {
+            networkNewsManager.fetchNews()
+            tableView.tableFooterView = pageActivityIndicator
+            guard shouldActivateActivityIndicator else { return }
+            pageActivityIndicator.startAnimating()
+        }
         }
 }
-
