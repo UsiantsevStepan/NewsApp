@@ -21,9 +21,8 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
         }
     }
     
-    //    private var shouldActivateActivityIndicator = false
-    
     private let pageActivityIndicator = UIActivityIndicatorView(style: .gray)
+    
     
     var refreshControl: UIRefreshControl = {
         let refreshControl = UIRefreshControl()
@@ -33,13 +32,13 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        
         refreshControl.addTarget(self, action: #selector(refresh), for: .valueChanged)
         tableView.refreshControl = refreshControl
         
         networkNewsManager.onCompletion = { [weak self] articles in
             self?.news = articles
             self?.refreshControl.endRefreshing()
-            //                self?.pageActivityIndicator.stopAnimating()
         }
         
         networkNewsManager.activateActivityIndicator = { [weak self] shouldActivateActivityIndicator in
@@ -50,10 +49,9 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
                 self?.pageActivityIndicator.stopAnimating()
                 self?.tableView.tableFooterView = nil
             }
-            //            self?.shouldActivateActivityIndicator = shouldActivateActivityIndicator
         }
         
-        self.tableView.tableFooterView = nil
+        tableView.contentInset.bottom = 0
         pageActivityIndicator.hidesWhenStopped = true
         networkNewsManager.fetchNews()
     }
@@ -95,7 +93,7 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
         let contentHeight = scrollView.contentSize.height
         
         if offsetY > 0,
-            offsetY > contentHeight - scrollView.frame.height + 200 {
+            offsetY > contentHeight - scrollView.frame.height {
             networkNewsManager.fetchNews()
         }
     }

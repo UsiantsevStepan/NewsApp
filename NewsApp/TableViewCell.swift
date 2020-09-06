@@ -13,7 +13,7 @@ class TableViewCell: UITableViewCell {
     @IBOutlet weak var newsImage: UIImageView!
     @IBOutlet weak var sourceNameLabel: UILabel?
     @IBOutlet weak var newsTitleLabel: UILabel?
-
+    
     override func prepareForReuse() {
         super.prepareForReuse()
         newsImage.image = nil
